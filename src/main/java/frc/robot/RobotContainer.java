@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 //import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 //import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
@@ -32,6 +33,9 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.Constants.OIConstants;
 // import frc.robot.Vision.Limelight;
 // import frc.robot.Vision.LimelightHelpers;
+import frc.robot.hijackablerotation.AprilTagLock;
+import frc.robot.hijackablerotation.Joystick;
+import frc.robot.hijackablerotation.RotationSource;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -85,12 +89,14 @@ public class RobotContainer {
         // **********************************************************
 
         // The driver's controller
-        XboxController m_driverController = new XboxController(
+        public static XboxController m_driverController = new XboxController(
                         OIConstants.kDriverControllerPort);
 
         // The operator's controller
-        XboxController m_operatorController = new XboxController(
+        public static XboxController m_operatorController = new XboxController(
                         OIConstants.kOperatorControllerPort);
+
+        private RotationSource hijackableRotation = new Joystick(); // get rotation from driver input;
 
         /**
          * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -106,7 +112,7 @@ public class RobotContainer {
                         new RunCommand(() -> m_robotDrive.drive(
                                 -MathUtil.applyDeadband( m_driverController.getLeftY(), OIConstants.kDriveDeadband), // * 0.95
                                 -MathUtil.applyDeadband( m_driverController.getLeftX(), OIConstants.kDriveDeadband), // * 0.95
-                                -MathUtil.applyDeadband( m_driverController.getRightX(), OIConstants.kDriveDeadband), // * 0.95
+                                hijackableRotation.getR(), // * 0.95
                                 true, true),m_robotDrive));
 
                 // Build an auto chooser. This will use Commands.none() as the default option.
@@ -139,6 +145,10 @@ public class RobotContainer {
 
                 new JoystickButton(m_driverController, Button.kStart.value)
                                 .whileTrue(new RunCommand(() -> m_robotDrive.zeroHeading(), m_robotDrive));
+
+                new JoystickButton(m_driverController, Button.kY.value)
+                                .onTrue(new InstantCommand(() -> hijackableRotation = new AprilTagLock()))
+                                .onFalse(new InstantCommand(() -> hijackableRotation = new Joystick()));
 
                 // Ring Intake In on floor
                 new JoystickButton(m_operatorController, Button.kRightBumper.value)
